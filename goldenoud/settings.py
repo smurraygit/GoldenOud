@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'category',
+    'accounts',
+
 ]
 
 MIDDLEWARE = [
@@ -126,3 +129,18 @@ STATICFILES_DIRS = [
 
 # to activate virtual environment
 # source ./env/Scripts/activate
+
+# to start new app named category
+# py manage.py startapp category
+
+# add model to database
+# py manage.py makemigrations
+# py manage.py migrate
+
+# to create superuser.
+# py manage.py createsuperuser
+# smurray
+# arshad02
+
+# to run server
+# py manage.py runserver
