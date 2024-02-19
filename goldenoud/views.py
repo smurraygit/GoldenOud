@@ -1,5 +1,11 @@
 from django.shortcuts import render
+from store.models import Product
 
 
 def home(requst):
-    return render(requst, 'home.html')
+    products = Product.objects.all().filter(is_available=True)
+
+    context = {
+        'products': products,
+    }
+    return render(requst, 'home.html', context)

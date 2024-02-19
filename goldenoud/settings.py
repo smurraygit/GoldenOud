@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'category',
     'accounts',
+    'store',
 
 ]
 
@@ -65,12 +66,15 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'category.context_processors.menu_links',
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'goldenoud.wsgi.application'
+
+AUTH_USER_MODEL = 'accounts.Account'
 
 
 # Database
@@ -126,12 +130,15 @@ STATICFILES_DIRS = [
     'goldenoud/static',
 ]
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # to activate virtual environment
 # source ./env/Scripts/activate
 
 # to start new app named category
 # py manage.py startapp category
+# py manage.py startapp store
 
 # add model to database
 # py manage.py makemigrations
