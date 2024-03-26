@@ -148,6 +148,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 # to create superuser.
 # py manage.py createsuperuser
+# saeed.murray@gmail.com
 # smurray
 # arshad02
 
