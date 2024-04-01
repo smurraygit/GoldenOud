@@ -3,6 +3,7 @@ from .forms import ResistrationForm
 from .models import Account
 from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 
 # verification email
 from django.contrib.sites.shortcuts import get_current_site
@@ -43,8 +44,9 @@ def register(request):
             to_emial = email
             send_email = EmailMessage(mail_subject, message, to=[to_emial])
             send_email.send()
-            messages.success(request, 'Registration successful.')
-            return redirect('register')
+            # messages.success(
+            # request, 'Verification Email has been sent, Please verify and Activate your Account')
+            return redirect('/accounts/login/?command=verification&email='+email)
     else:
         form = ResistrationForm()
     context = {
@@ -63,7 +65,7 @@ def login(request):
         if user is not None:
             auth.login(request, user)
             messages.success(request, 'You are logged in')
-            return redirect('home')
+            return redirect('dashboard')
         else:
             messages.error(request, 'Invalid login credentials')
             return redirect('login')
@@ -77,5 +79,27 @@ def logout(request):
     return redirect('login')
 
 
-def activate(request):
-    return
+def activate(request, uidb64, token):
+    try:
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = Account._default_manager.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, Account.DoesNotExist):
+        user = None
+
+    if user is not None and default_token_generator.check_token(user, token):
+        user.is_active = True
+        user.save()
+        messages.success(request, 'Congratulations! Your account is activated')
+        return redirect('login')
+    else:
+        messages.error(request, 'Invalid activation link')
+        return redirect('register')
+
+
+@login_required(login_url='login')
+def dashboard(request):
+    return render(request, 'accounts/dashboard.html')
+
+
+def forgotPassword(request):
+    return render(request, 'accounts/forgotPassword.html')
