@@ -172,3 +172,7 @@ EMAIL_USE_TLS = True
 
 # to run server
 # py manage.py runserver
+
+# test card
+# sb-jvr47x26232561@personal.example.com
+# k-S_)3tn
