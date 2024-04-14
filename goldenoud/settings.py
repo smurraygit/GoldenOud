@@ -45,7 +45,14 @@ INSTALLED_APPS = [
     'carts',
     'orders',
     'admin_honeypot',
+    'guest_user',
 
+]
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    # it should be the last entry to prevent unauthorized access
+    "guest_user.backends.GuestBackend",
 ]
 
 MIDDLEWARE = [

@@ -5,6 +5,7 @@ from django.contrib import messages, auth
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from orders.models import Order, OrderProduct
+import datetime
 
 
 # verification email
@@ -64,6 +65,86 @@ def register(request):
         'form': form,
     }
     return render(request, 'accounts/register.html', context)
+
+
+def register_guest(request):
+    now = datetime.datetime.now()
+    current_time = now.strftime('%y%m%d%H%M%S')
+    ip = request.META.get('REMOTE_ADDR')
+    first_name = 'guest2'
+    last_name = 'shopper2'
+    phone_number = '123456'
+    email = 'guest' + ip + current_time + '2@email.com'
+    password = '$trongP$sS'
+    username = email.split('@')[0]
+    user = Account.objects.create_user(
+        first_name=first_name, last_name=last_name, email=email, username=username, password=password)
+    user.phone_number = phone_number
+    user.is_active = True
+    user.save()
+
+    profile = UserProfile()
+    profile.user_id = user.id
+    profile.profile_picture = 'default/default-user.png'
+    profile.save()
+
+    user = auth.authenticate(email=email, password=password)
+
+    if user is not None:
+        try:
+            cart = Cart.objects.get(cart_id=_cart_id(request))
+            is_cart_item_exists = CartItem.objects.filter(
+                cart=cart).exists()
+            if is_cart_item_exists:
+                cart_item = CartItem.objects.filter(cart=cart)
+
+                # getting product variation by cart id
+                product_variation = []
+                for item in cart_item:
+                    variation = item.variations.all()
+                    product_variation.append(list(variation))
+
+                # get the cart items from the user to access his product variations
+                cart_item = CartItem.objects.filter(user=user)
+                ex_var_list = []
+                id = []
+                for item in cart_item:
+                    existing_variation = item.variations.all()
+                    ex_var_list.append(list(existing_variation))
+                    id.append(item.id)
+
+                # product_variation = [1,2,3,4,5,6]
+                # ex_var_list = [4,6,3,5]
+
+                for pr in product_variation:
+                    if pr in ex_var_list:
+                        index = ex_var_list.index(pr)
+                        item_id = id[index]
+                        item = CartItem.objects.get(id=item_id)
+                        item.quantity += 1
+                        item.user = user
+                        item.save()
+                    else:
+                        cart_item = CartItem.objects.filter(cart=cart)
+                        for item in cart_item:
+                            item.user = user
+                            item.save()
+        except:
+            pass
+        auth.login(request, user)
+        messages.success(request, 'You are logged in')
+        url = request.META.get('HTTP_REFERER')
+        try:
+            query = requests.utils.urlparse(url).query
+
+            params = dict(x.split('=') for x in query.split('&'))
+            if 'next' in params:
+                nextPage = params['next']
+                return redirect(nextPage)
+        except:
+            return redirect('dashboard')
+
+    return render(request, 'store/checkout.html')
 
 
 def login(request):
@@ -132,7 +213,7 @@ def login(request):
     return render(request, 'accounts/login.html')
 
 
-@login_required(login_url='login')
+@ login_required(login_url='login')
 def logout(request):
     auth.logout(request)
     messages.success(request, 'You are logged out')
@@ -156,7 +237,7 @@ def activate(request, uidb64, token):
         return redirect('register')
 
 
-@login_required(login_url='login')
+@ login_required(login_url='login')
 def dashboard(request):
     orders = Order.objects.order_by(
         '-created_at').filter(user_id=request.user.id, is_ordered=True)
@@ -231,7 +312,7 @@ def resetPassword(request):
         return render(request, 'accounts/resetPassword.html')
 
 
-@login_required(login_url='login')
+@ login_required(login_url='login')
 def my_orders(request):
     order = Order.objects.filter(
         user=request.user, is_ordered=True).order_by('-created_at')
@@ -241,7 +322,7 @@ def my_orders(request):
     return render(request, 'accounts/my_orders.html', context)
 
 
-@login_required(login_url='login')
+@ login_required(login_url='login')
 def edit_profile(request):
     userprofile = get_object_or_404(UserProfile, user=request.user)
     if request.method == 'POST':
@@ -266,7 +347,7 @@ def edit_profile(request):
     return render(request, 'accounts/edit_profile.html', context)
 
 
-@login_required(login_url='login')
+@ login_required(login_url='login')
 def change_password(request):
     if request.method == 'POST':
         current_password = request.POST['current_password']
@@ -292,7 +373,7 @@ def change_password(request):
     return render(request, 'accounts/change_password.html')
 
 
-@login_required(login_url='login')
+@ login_required(login_url='login')
 def order_detail(request, order_id):
     order_detail = OrderProduct.objects.filter(order__order_number=order_id)
     order = Order.objects.get(order_number=order_id)
