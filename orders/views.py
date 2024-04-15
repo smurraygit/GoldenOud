@@ -10,8 +10,11 @@ from django.template.loader import render_to_string
 
 # Create your views here.
 
+guest_email = ''
+
 
 def payments(request):
+    global guest_email
     body = json.loads(request.body)
     order = Order.objects.get(
         user=request.user, is_ordered=False, order_number=body['orderID'])
@@ -58,6 +61,12 @@ def payments(request):
     CartItem.objects.filter(user=request.user).delete()
     # send order received email
 
+    if 'guest' in request.user.email:
+        customer_email = guest_email
+
+    else:
+        customer_email = request.user.email
+
     # user Activation
     mail_subject = 'Thank you for your order'
     message = render_to_string('orders/order_receive_email.html', {
@@ -65,7 +74,7 @@ def payments(request):
         'order': order,
 
     })
-    to_emial = request.user.email
+    to_emial = customer_email
     send_email = EmailMessage(mail_subject, message, to=[to_emial])
     send_email.send()
 
@@ -96,6 +105,7 @@ def place_order(request, total=0, quantity=0,):
     grand_total = total + tax
 
     if request.method == 'POST':
+        global guest_email
         form = OrderForms(request.POST)
         if form.is_valid():
             # store all data to order
@@ -105,6 +115,7 @@ def place_order(request, total=0, quantity=0,):
             data.last_name = form.cleaned_data['last_name']
             data.phone = form.cleaned_data['phone']
             data.email = form.cleaned_data['email']
+            guest_email = form.cleaned_data['email']
             data.address_line_1 = form.cleaned_data['address_line_1']
             data.address_line_2 = form.cleaned_data['address_line_2']
             data.city = form.cleaned_data['city']

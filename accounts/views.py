@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from orders.models import Order, OrderProduct
 import datetime
+import random
 
 
 # verification email
@@ -68,13 +69,16 @@ def register(request):
 
 
 def register_guest(request):
+    secret_code = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
+    random.shuffle(secret_code)
+    random_code = ''.join(map(str, secret_code))
     now = datetime.datetime.now()
     current_time = now.strftime('%y%m%d%H%M%S')
     ip = request.META.get('REMOTE_ADDR')
-    first_name = 'guest2'
-    last_name = 'shopper2'
-    phone_number = '123456'
-    email = 'guest' + ip + current_time + '2@email.com'
+    first_name = 'Guest'
+    last_name = 'Shopper'
+    phone_number = '1234567890'
+    email = 'guest-' + ip + '-' + current_time + '-' + random_code + '2@email.com'
     password = '$trongP$sS'
     username = email.split('@')[0]
     user = Account.objects.create_user(

@@ -42,12 +42,14 @@
                     {% for category in links%}
                     <a class="dropdown-item" href="{{category.get_url}}">{{category.category_name}} </a>
                     {% endfor %}
-
                 </div>
             </div>  <!-- category-wrap.// -->
         </div> <!-- col.// -->
-        <a href="{% url 'store' %}" class="btn btn-outline-primary">Store</a>
-        <div class="col-lg  col-md-6 col-sm-12 col">
+        <div class="sm-col-2 ml-2 mb-3 mb-lg-0 mb-md-0">
+            <a href="{% url 'store' %}" class="btn btn-outline-primary">Store</a>
+        </div>
+        
+        <div class="col-lg-4 col-md-6 col-9 ml-3 ml-md-0 ml-lg-0">
             <form action="{% url 'search' %}" class="search" method="GET">
                 <div class="input-group w-100">
                     <input type="text" class="form-control" style="width:60%;" placeholder="Search" name="keyword">
@@ -60,7 +62,8 @@
                 </div>
             </form> <!-- search-wrap .end// -->
         </div> <!-- col.// -->
-        <div class="col-lg-3 col-sm-6 col-8 order-2 order-lg-3">
+        <div class="col-lg-3 col-md-6 col-12 order-2 order-lg-3 ">
+            
             {% if user.id is None %}
                     <div class="d-flex justify-content-end mb-3 mb-lg-0">
                         <div class="widget-header">
