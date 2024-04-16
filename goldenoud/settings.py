@@ -13,9 +13,6 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 from django.contrib.messages import constants as messages
 from pathlib import Path
 from decouple import config
-import os
-import django_heroku
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
@@ -25,14 +22,13 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = config('SECRET_KEY')
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = [
-    'limitless-cliffs-08424-f8ce4fc868ec.herokuapp.com', '127.0.0.1']
+    'django-goldeonoud-env.eba-pezw4nwe.us-west-2.elasticbeanstalk.com']
 
 
 # Application definition
@@ -50,14 +46,7 @@ INSTALLED_APPS = [
     'carts',
     'orders',
     'admin_honeypot',
-    'guest_user',
 
-]
-
-AUTHENTICATION_BACKENDS = [
-    "django.contrib.auth.backends.ModelBackend",
-    # it should be the last entry to prevent unauthorized access
-    "guest_user.backends.GuestBackend",
 ]
 
 MIDDLEWARE = [
@@ -142,15 +131,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.1/howto/static-files/
 
-STATIC_URL = "/static/"
-# STATIC_ROOT = BASE_DIR / 'static'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# STATICFILES_DIRS = [
-# 'goldenoud/static',
-# STATICFILES_DIRS =
-# ]
-STATICFILES_DIRS = (os.path.join(BASE_DIR, 'goldenoud/static'),)
-django_heroku.settings(locals())
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'static'
+STATICFILES_DIRS = [
+    'goldenoud/static',
+]
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -167,11 +152,7 @@ EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
 
-# EMAIL_HOST = os.environ.get('EMAIL_HOST')
-# EMAIL_PORT = os.environ.get('EMAIL_PORT', cast=int)
-# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-# EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', default=False, cast=bool)
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -200,3 +181,8 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
 # test card
 # sb-jvr47x26232561@personal.example.com
 # k-S_)3tn
+
+# awsbean
+# https://767397959529.signin.aws.amazon.com/console
+# greatkart_user
+# 4r$had0z
