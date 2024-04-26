@@ -27,8 +27,8 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = [
-    'django-goldeonoud-env.eba-pezw4nwe.us-west-2.elasticbeanstalk.com']
+ALLOWED_HOSTS = ['213.52.130.213', '127.0.0.1',
+                 'goldenoud.xyz', 'www.goldenoud.xyz']
 
 
 # Application definition
@@ -178,11 +178,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 # to run server
 # py manage.py runserver
 
-# test card
-# sb-jvr47x26232561@personal.example.com
-# k-S_)3tn
 
 # awsbean
 # https://767397959529.signin.aws.amazon.com/console
 # greatkart_user
 # 4r$had0z
+
+# ssh-key
+# greatkart
+# SHA256:bwqGjqzyTA7GZk7Z/KXjhyozRrXpEOTL+ZWjn+kCMFo smurray@C3601
+# aws-eb  aws-eb.pub  id_rsa  id_rsa.pub
+
+
+# password linode
+# greatkartgreatkart
+# *X2!HS)u3G#oyk
