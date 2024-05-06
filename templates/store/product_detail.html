@@ -86,7 +86,7 @@
 						<h5 class="text-danger">Out of Stock </h5>
 					{% else %}
 
-							<button type="submit"  class="btn  btn-primary"> <span class="text">Add to Cart</span> <i class="fas fa-shopping-cart"></i>  </button>
+							<button type="submit"  class="btn  btn-dark"> <span class="text">Add to Cart</span> <i class="fas fa-shopping-cart"></i>  </button>
 						
 					{% endif %}
 				</article> <!-- product-info-aside .// -->
@@ -133,7 +133,7 @@
 			<br>
 			{% if user.is_authenticated %}
 				{% if orderproduct %}
-				<input type="submit" class="btn btn-primary" value="Submit Review">
+				<input type="submit" class="btn btn-dark" value="Submit Review">
 				{% else %}				
 					<p>You must must purchase this project to post a review.</p>
 				{% endif %}
