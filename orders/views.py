@@ -7,6 +7,7 @@ import datetime
 import json
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
+from django.contrib.auth.decorators import user_passes_test
 
 # Create your views here.
 
@@ -76,6 +77,7 @@ def payments(request):
     })
     to_emial = customer_email
     send_email = EmailMessage(mail_subject, message, to=[to_emial])
+    send_email.content_subtype = "html"
     send_email.send()
 
     # send order number and payment id back to send data method via json
@@ -178,3 +180,4 @@ def order_complete(request):
 
     except (Payment.DoesNotExist, Order.DoesNotExist):
         return redirect('home')
+

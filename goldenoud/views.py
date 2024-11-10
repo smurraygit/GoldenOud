@@ -2,7 +2,7 @@ from django.shortcuts import render
 from store.models import Product, ReviewRating
 
 
-def home(requst):
+def home(request):
     products = Product.objects.all().filter(
         is_available=True).order_by('created_date')
 
@@ -14,4 +14,4 @@ def home(requst):
         'products': products,
         'reviews': reviews,
     }
-    return render(requst, 'home.html', context)
+    return render(request, 'home.html', context)

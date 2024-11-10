@@ -21,6 +21,17 @@ from carts.views import _cart_id
 from carts.models import Cart, CartItem
 import requests
 
+from django.contrib.auth.decorators import user_passes_test
+
+
+from django.db.models import Count
+from django.db.models.functions import TruncDate
+from django.utils import timezone
+from django.shortcuts import render
+import json
+
+
+
 
 # Create your views here.
 
@@ -69,87 +80,61 @@ def register(request):
 
 
 def register_guest(request):
-    secret_code = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
-    random.shuffle(secret_code)
-    random_code = ''.join(map(str, secret_code))
+    # Generate a unique guest email using timestamp
     now = datetime.datetime.now()
     current_time = now.strftime('%y%m%d%H%M%S')
-    ip = request.META.get('REMOTE_ADDR')
-    first_name = 'Guest'
-    last_name = 'Shopper'
-    phone_number = '1234567890'
-    email = 'guest-' + ip + '-' + current_time + '-' + random_code + '2@email.com'
+    email = f'guest-{current_time}@email.com'
     password = '$trongP$sS'
     username = email.split('@')[0]
+    
+    # Create guest user account
     user = Account.objects.create_user(
-        first_name=first_name, last_name=last_name, email=email, username=username, password=password)
-    user.phone_number = phone_number
+        first_name='Guest',
+        last_name='Shopper',
+        email=email,
+        username=username,
+        password=password
+    )
+    user.phone_number = '1234567890'
     user.is_active = True
     user.save()
-
-    profile = UserProfile()
-    profile.user_id = user.id
-    profile.profile_picture = 'default/default-user.png'
+    
+    # Set up user profile
+    profile = UserProfile(user=user, profile_picture='default/default-user.png')
     profile.save()
 
+    # Authenticate and log in guest user
     user = auth.authenticate(email=email, password=password)
-
-    if user is not None:
+    if user:
         try:
+            # Transfer cart items to guest user account
             cart = Cart.objects.get(cart_id=_cart_id(request))
-            is_cart_item_exists = CartItem.objects.filter(
-                cart=cart).exists()
-            if is_cart_item_exists:
-                cart_item = CartItem.objects.filter(cart=cart)
+            cart_items = CartItem.objects.filter(cart=cart)
+            existing_user_cart_items = CartItem.objects.filter(user=user)
+            existing_variations = [list(item.variations.all()) for item in existing_user_cart_items]
+            ids = [item.id for item in existing_user_cart_items]
 
-                # getting product variation by cart id
-                product_variation = []
-                for item in cart_item:
-                    variation = item.variations.all()
-                    product_variation.append(list(variation))
+            for item in cart_items:
+                variation = list(item.variations.all())
+                if variation in existing_variations:
+                    index = existing_variations.index(variation)
+                    existing_item = CartItem.objects.get(id=ids[index])
+                    existing_item.quantity += item.quantity
+                    existing_item.save()
+                else:
+                    item.user = user
+                    item.save()
 
-                # get the cart items from the user to access his product variations
-                cart_item = CartItem.objects.filter(user=user)
-                ex_var_list = []
-                id = []
-                for item in cart_item:
-                    existing_variation = item.variations.all()
-                    ex_var_list.append(list(existing_variation))
-                    id.append(item.id)
-
-                # product_variation = [1,2,3,4,5,6]
-                # ex_var_list = [4,6,3,5]
-
-                for pr in product_variation:
-                    if pr in ex_var_list:
-                        index = ex_var_list.index(pr)
-                        item_id = id[index]
-                        item = CartItem.objects.get(id=item_id)
-                        item.quantity += 1
-                        item.user = user
-                        item.save()
-                    else:
-                        cart_item = CartItem.objects.filter(cart=cart)
-                        for item in cart_item:
-                            item.user = user
-                            item.save()
-        except:
+        except Cart.DoesNotExist:
             pass
-        auth.login(request, user)
-        messages.success(request, 'You are logged in')
-        url = request.META.get('HTTP_REFERER')
-        try:
-            query = requests.utils.urlparse(url).query
 
-            params = dict(x.split('=') for x in query.split('&'))
-            if 'next' in params:
-                nextPage = params['next']
-                return redirect(nextPage)
-        except:
-            return redirect('dashboard')
+        auth.login(request, user)
+        messages.success(request, 'You are logged in as a guest')
+
+        # Redirect directly to the checkout page after guest registration
+        return redirect('checkout')
 
     return render(request, 'store/checkout.html')
-
 
 def login(request):
     if request.method == 'POST':
@@ -390,3 +375,98 @@ def order_detail(request, order_id):
         'subtotal': subtotal,
     }
     return render(request, 'accounts/order_detail.html', context)
+
+
+# Only allow access if the user is an admin
+@user_passes_test(lambda u: u.is_staff)
+def admin_order_list(request):
+    orders = Order.objects.all()  # Retrieve all orders
+    return render(request, 'accounts/admin_orders.html', {'orders': orders})
+
+
+
+@user_passes_test(lambda u: u.is_staff)
+def admin_dashboard(request):
+    # Retrieve all orders and count
+    orders = Order.objects.all().order_by('-created_at')
+    orders_count = orders.count()
+
+    # Prepare data for Order Status Chart
+    status_counts = orders.values('status').annotate(count=Count('status'))
+    
+    # Group the statuses
+    grouped_status = {
+        'New': 0,
+        'Processing': 0,
+        'Shipped': 0,
+        'Refunded': 0
+    }
+    
+    for status in status_counts:
+        grouped_status[status['status']] += status['count']
+    
+    order_status_labels = list(grouped_status.keys())
+    order_status_data = list(grouped_status.values())
+
+    # Prepare data for Daily Orders Chart
+    end_date = timezone.now().date()
+    start_date = end_date - timezone.timedelta(days=30)
+    daily_orders = orders.filter(created_at__date__range=[start_date, end_date]) \
+                         .annotate(date=TruncDate('created_at')) \
+                         .values('date') \
+                         .annotate(count=Count('id')) \
+                         .order_by('date')
+
+    daily_order_labels = [order['date'].strftime('%Y-%m-%d') for order in daily_orders]
+    daily_order_data = [order['count'] for order in daily_orders]
+
+    context = {
+        'orders': orders,
+        'orders_count': orders_count,
+        'order_status_labels': json.dumps(order_status_labels),
+        'order_status_data': order_status_data,
+        'daily_order_labels': json.dumps(daily_order_labels),
+        'daily_order_data': daily_order_data,
+    }
+
+    return render(request, 'accounts/admin_dashboard.html', context)
+
+
+
+
+guest_email = ""  # Replace this with your guest email logic if needed
+
+@login_required(login_url='login')
+@user_passes_test(lambda u: u.is_staff)  # Only allows staff users
+def update_order_status(request, order_number):
+    order = get_object_or_404(Order, order_number=order_number)
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        order.status = new_status
+        order.save()
+        messages.success(request, 'Order status updated successfully.')
+
+        # Check if the order status is set to 'Shipped'
+        if new_status == 'Shipped':
+            # Determine customer email
+            if 'guest' in request.user.email:
+                customer_email = guest_email
+            else:
+                customer_email = request.user.email
+
+            # Prepare email content
+            mail_subject = 'Your Order Has Been Shipped'
+            message = render_to_string('orders/shipped_confirmation.html', {
+                'user': request.user,
+                'order': order,
+            })
+            email = EmailMessage(mail_subject, message, to=[customer_email])
+            email.content_subtype = "html"  # Set content to HTML
+
+            # Send email
+            email.send()
+            messages.info(request, 'Order has been shipped. A confirmation email has been sent to the customer.')
+
+    return redirect('order_detail', order_id=order_number)
+
+

@@ -18,12 +18,19 @@ class Payment(models.Model):
 
 
 class Order(models.Model):
+
     STATUS = (
         ('New', 'New'),
-        ('Accepted', 'Accepted'),
-        ('Completed', 'Completed'),
-        ('Cancelled', 'Cancelled'),
+        ('Processing', 'Processing'),
+        ('Shipped', 'Shipped'),
+        ('Refunded', 'Refunded'),
     )
+    status = models.CharField(max_length=10, choices=STATUS, default='New')
+
+    # Allow access to STATUS choices in the template
+    STATUS_CHOICES = STATUS
+
+    
     user = models.ForeignKey(Account, on_delete=models.SET_NULL, null=True)
     payment = models.ForeignKey(Payment, on_delete=models.SET_NULL, null=True)
     order_number = models.CharField(max_length=20)

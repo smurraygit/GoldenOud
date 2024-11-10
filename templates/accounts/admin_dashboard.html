@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section-conten padding-y bg">
+    {% include 'includes/alerts.html' %}
+
+    <div class="container">
+        <div class="row">
+            <main class="col-md-12">
+                <article class="card mb-4">
+                    <header class="card-header">
+                        <strong class="d-inline-block mr-3">Admin Dashboard - Order Overview</strong>
+                        <span>Total Orders: {{ orders_count }}</span>
+                    </header>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <canvas id="orderStatusChart" width="300" height="300"></canvas>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <canvas id="dailyOrdersChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label for="statusFilter">Filter by Status:</label>
+                                <select id="statusFilter" class="form-control" onchange="filterTable()">
+                                    <option value="">All</option>
+                                    <option value="New">New</option>
+                                    <option value="Processing">Processing</option>
+                                    <option value="Shipped">Shipped</option>
+                                    <option value="Refunded">Refunded</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <table id="orderTable" class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th onclick="sortTable(0)">Order # <span class="sort-icon">&#8597;</span></th>
+                                            <th onclick="sortTable(1)">Customer <span class="sort-icon">&#8597;</span></th>
+                                            <th onclick="sortTable(2)">Phone <span class="sort-icon">&#8597;</span></th>
+                                            <th onclick="sortTable(3)">Email <span class="sort-icon">&#8597;</span></th>
+                                            <th onclick="sortTable(4)">Total <span class="sort-icon">&#8597;</span></th>
+                                            <th onclick="sortTable(5)">Status <span class="sort-icon">&#8597;</span></th>
+                                            <th onclick="sortTable(6)">Date <span class="sort-icon">&#8597;</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for order in orders %}
+                                        <tr>
+                                            <td><a href="{% url 'order_detail' order.order_number %}">{{ order.order_number }}</a></td>
+                                            <td>{{ order.full_name }}</td>
+                                            <td>{{ order.phone }}</td>
+                                            <td>{{ order.email }}</td>
+                                            <td>£{{ order.order_total }}</td>
+                                            <td>{{ order.status }}</td>
+                                            <td>{{ order.created_at }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            </main>
+        </div>
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Order Status Chart
+    var ctxStatus = document.getElementById('orderStatusChart').getContext('2d');
+    var orderStatusChart = new Chart(ctxStatus, {
+        type: 'pie',
+        data: {
+            labels: {{ order_status_labels|safe }},
+            datasets: [{
+                data: {{ order_status_data }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.8)',
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(255, 206, 86, 0.8)',
+                    'rgba(75, 192, 192, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: false,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Order Status Distribution'
+                },
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            let value = context.parsed || 0;
+                            let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            let percentage = Math.round((value / total) * 100);
+                            label += value + ' orders (' + percentage + '%)';
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Daily Orders Chart
+    var ctxDaily = document.getElementById('dailyOrdersChart').getContext('2d');
+    var dailyOrdersChart = new Chart(ctxDaily, {
+        type: 'line',
+        data: {
+            labels: {{ daily_order_labels|safe }},
+            datasets: [{
+                label: 'Daily Orders',
+                data: {{ daily_order_data }},
+                borderColor: 'rgba(75, 192, 192, 1)',
+                tension: 0.1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Number of Orders'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Daily Order Trend (Last 30 Days)'
+                }
+            }
+        }
+    });
+
+    // Sorting function
+    function sortTable(n) {
+        var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+        table = document.getElementById("orderTable");
+        switching = true;
+        dir = "asc";
+        while (switching) {
+            switching = false;
+            rows = table.getElementsByTagName("TR");
+            for (i = 1; i < (rows.length - 1); i++) {
+                shouldSwitch = false;
+                x = rows[i].getElementsByTagName("TD")[n];
+                y = rows[i + 1].getElementsByTagName("TD")[n];
+                if (dir == "asc") {
+                    if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                } else if (dir == "desc") {
+                    if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                        shouldSwitch = true;
+                        break;
+                    }
+                }
+            }
+            if (shouldSwitch) {
+                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                switching = true;
+                switchcount++;
+            } else {
+                if (switchcount == 0 && dir == "asc") {
+                    dir = "desc";
+                    switching = true;
+                }
+            }
+        }
+        
+        // Update sort icons
+        var headers = table.getElementsByTagName("TH");
+        for (i = 0; i < headers.length; i++) {
+            headers[i].getElementsByClassName("sort-icon")[0].innerHTML = "&#8597;";
+        }
+        headers[n].getElementsByClassName("sort-icon")[0].innerHTML = (dir === "asc" ? "&#8593;" : "&#8595;");
+    }
+
+    // Filtering function
+    function filterTable() {
+        var input, filter, table, tr, td, i, txtValue;
+        input = document.getElementById("statusFilter");
+        filter = input.value.toUpperCase();
+        table = document.getElementById("orderTable");
+        tr = table.getElementsByTagName("tr");
+
+        for (i = 0; i < tr.length; i++) {
+            td = tr[i].getElementsByTagName("td")[5]; // Status is in the 6th column (index 5)
+            if (td) {
+                txtValue = td.textContent || td.innerText;
+                if (filter === "" || txtValue.toUpperCase() === filter) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+</script>
+
+<style>
+    th {
+        cursor: pointer;
+    }
+    .sort-icon {
+        display: inline-block;
+        width: 1em;
+        text-align: center;
+    }
+</style>
+{% endblock %}
