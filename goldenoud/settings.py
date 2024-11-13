@@ -154,6 +154,12 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 
+# In settings.py
+STRIPE_SECRET_KEY = 'sk_test_51NGnZcLAob8kQ6E5Hdd1o0Frrc9VoRzaX2tF3HtLLyNX20eN23DDCTDtInng57YzdYEV53kCS8i1RKzmRACCQB1k00431wTZ5B'
+STRIPE_PUBLIC_KEY = 'pk_test_51NGnZcLAob8kQ6E5ctOUo5ctkKxSWOV7IFrPrrQHcscwTnAAIXa8LbOgsVEnz8syhkDGJLdAng2kLABEzC3An40t00IEIIWqDU'
+
+
+
 # EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 # EMAIL_HOST_PASSWORD = 'xrue beiq gouj nxpq' or '4rshad02'
 

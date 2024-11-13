@@ -8,89 +8,63 @@ import json
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import user_passes_test
+import stripe
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 
 # Create your views here.
 
 guest_email = ''
 
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+
+
+
+# Set Stripe API key
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 def payments(request):
-    global guest_email
+    # Parse the request body to get order details
     body = json.loads(request.body)
-    order = Order.objects.get(
-        user=request.user, is_ordered=False, order_number=body['orderID'])
-    # store transaction detail inside paymentmodel
+    order = get_object_or_404(Order, user=request.user, is_ordered=False, order_number=body['orderID'])
+
+    # Create a Stripe Checkout Session
+    session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        line_items=[{
+            'price_data': {
+                'currency': 'usd',
+                'product_data': {
+                    'name': f'Order {order.order_number}',
+                },
+                'unit_amount': int(order.order_total * 100),  # Stripe requires amount in cents
+            },
+            'quantity': 1,
+        }],
+        mode='payment',
+        success_url=request.build_absolute_uri('/order-complete?session_id={CHECKOUT_SESSION_ID}'),
+        cancel_url=request.build_absolute_uri('/checkout'),
+    )
+
+    # Save the payment information in the Payment model
     payment = Payment(
         user=request.user,
-        payment_id=body['transID'],
-        payment_method=['body.payment_method'],
+        payment_id=session.id,
+        payment_method='Stripe',
         amount_paid=order.order_total,
-        status=body['status'],
-
+        status='pending'
     )
     payment.save()
 
+    # Link payment to order but mark order as not yet completed
     order.payment = payment
-    order.is_ordered = True
     order.save()
 
-    # move cart items to order product table
-    cart_items = CartItem.objects.filter(user=request.user)
-    for item in cart_items:
-        orderproduct = OrderProduct()
-        orderproduct.order_id = order.id
-        orderproduct.payment = payment
-        orderproduct.user_id = request.user.id
-        orderproduct.product_id = item.product_id
-        orderproduct.quantity = item.quantity
-        orderproduct.product_price = item.product.price
-        orderproduct.ordered = True
-        orderproduct.save()
-
-        cart_item = CartItem.objects.get(id=item.id)
-        product_variation = cart_item.variations.all()
-        orderproduct = OrderProduct.objects.get(id=orderproduct.id)
-        orderproduct.variations.set(product_variation)
-        orderproduct.save()
-
-    # reduce  quantity of sold products
-        product = Product.objects.get(id=item.product_id)
-        product.stock -= item.quantity
-        product.save()
-
-    # clear the cart
-    CartItem.objects.filter(user=request.user).delete()
-    # send order received email
-
-    if 'guest' in request.user.email:
-        customer_email = guest_email
-
-    else:
-        customer_email = request.user.email
-
-    # user Activation
-    mail_subject = 'Thank you for your order'
-    message = render_to_string('orders/order_receive_email.html', {
-        'user': request.user,
-        'order': order,
-
-    })
-    to_emial = customer_email
-    send_email = EmailMessage(mail_subject, message, to=[to_emial])
-    send_email.content_subtype = "html"
-    send_email.send()
-
-    # send order number and payment id back to send data method via json
-    data = {
-        'order_number': order.order_number,
-        'transID': payment.payment_id,
-    }
-    return JsonResponse(data)
-
-    return render(request, 'orders/payments.html')
+    return JsonResponse({'sessionId': session.id})
 
 
-def place_order(request, total=0, quantity=0,):
+def place_order(request, total=0, quantity=0, weight_total=0):
     current_user = request.user
 
     cart_items = CartItem.objects.filter(user=current_user)
@@ -103,6 +77,7 @@ def place_order(request, total=0, quantity=0,):
     for cart_item in cart_items:
         total += (cart_item.product.price * cart_item.quantity)
         quantity += cart_item.quantity
+        weight_total += (cart_item.product.weight * cart_item.quantity)  # Calculate total weight
     tax = (2 * total)/100
     grand_total = total + tax
 
@@ -127,6 +102,7 @@ def place_order(request, total=0, quantity=0,):
             data.order_note = form.cleaned_data['order_note']
             data.order_total = grand_total
             data.tax = tax
+            data.weight_total = weight_total  # Save the total weight
             data.ip = request.META.get('REMOTE_ADDR')
             data.save()
             # generate order number
@@ -154,27 +130,67 @@ def place_order(request, total=0, quantity=0,):
 
 
 def order_complete(request):
-    order_number = request.GET.get('order_number')
-    transID = request.GET.get('payment_id')
-
+    session_id = request.GET.get('session_id')
     try:
-        order = Order.objects.get(order_number=order_number, is_ordered=True)
-        ordered_products = OrderProduct.objects.filter(order_id=order.id)
+        # Retrieve session and payment intent from Stripe
+        session = stripe.checkout.Session.retrieve(session_id)
+        payment_intent = stripe.PaymentIntent.retrieve(session.payment_intent)
 
-        subtotal = 0
-        for i in ordered_products:
-            subtotal += i.product_price * i.quantity
+        # Get the order and update payment status to paid
+        order = Order.objects.get(order_number=session.client_reference_id, is_ordered=False)
+        payment = Payment.objects.get(payment_id=session.id)
+        payment.status = 'Paid'
+        payment.save()
 
-        payment = Payment.objects.get(payment_id=transID)
+        # Mark the order as completed
+        order.is_ordered = True
+        order.payment = payment
+        order.save()
 
+        # Move cart items to order product table and clear the cart
+        cart_items = CartItem.objects.filter(user=request.user)
+        for item in cart_items:
+            order_product = OrderProduct.objects.create(
+                order_id=order.id,
+                payment=payment,
+                user_id=request.user.id,
+                product_id=item.product_id,
+                quantity=item.quantity,
+                product_price=item.product.price,
+                ordered=True
+            )
+            order_product.variations.set(item.variations.all())
+            order_product.save()
+
+            # Reduce the stock for the purchased product
+            product = item.product
+            product.stock -= item.quantity
+            product.save()
+
+        # Clear the cart
+        cart_items.delete()
+
+        # Send order confirmation email
+        mail_subject = 'Thank you for your order'
+        message = render_to_string('orders/order_receive_email.html', {
+            'user': request.user,
+            'order': order,
+        })
+        to_email = request.user.email
+        email = EmailMessage(mail_subject, message, to=[to_email])
+        email.content_subtype = "html"
+        email.send()
+
+        # Calculate subtotal for the order complete page
+        subtotal = sum(item.product_price * item.quantity for item in OrderProduct.objects.filter(order_id=order.id))
+
+        # Render the order complete page
         context = {
             'order': order,
-            'ordered_products': ordered_products,
+            'ordered_products': OrderProduct.objects.filter(order_id=order.id),
             'order_number': order.order_number,
-            'transID': payment.payment_id,
             'payment': payment,
-            'subtotal': subtotal
-
+            'subtotal': subtotal,
         }
         return render(request, 'orders/order_complete.html', context)
 

@@ -22,6 +22,7 @@ urlpatterns = [
       path('admin_dashboard/', views.admin_dashboard, name='admin_dashboard'),
        path('order_detail/<int:order_id>/', views.order_detail, name='order_detail'),
         path('update-order-status/<str:order_number>/', views.update_order_status, name='update_order_status'),
+       
         
 
 ]
