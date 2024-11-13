@@ -27,7 +27,7 @@ SECRET_KEY = 'fjwqbop2zf#x0!8trrx@*%mi#utuyj=pof&$n@id!qmbyme5(^'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = 'True'
 
-ALLOWED_HOSTS = [ 'www.glasgoud.com']
+ALLOWED_HOSTS = ['glasgoud', 'www.glasgoud.com', '127.0.0.1']
 
 
 # Application definition

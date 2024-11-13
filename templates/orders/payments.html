@@ -99,8 +99,13 @@
             <p class="text-center mb-3">
                 <img src="{% static './images/misc/payments.png' %}" height="26">
             </p>
-            <!-- Stripe Button -->
-            <button id="checkout-button" class="btn btn-primary btn-block">Pay with Stripe</button>
+
+            <form id="stripe-payment-form" method="POST" action="{% url 'payments' order.order_number %}">
+                {% csrf_token %}
+                <button id="stripe-pay-button" class="btn btn-primary btn-block" type="button">Pay with Stripe</button>
+            </form>
+            
+           
         </div>
         </div>
     </aside>
@@ -109,53 +114,40 @@
 </div>
 </section>
 
-<!-- Stripe JS integration -->
-<script src="https://js.stripe.com/v3/"></script>
 <script>
-    var stripe = Stripe("{{ STRIPE_PUBLIC_KEY }}");
-
-    document.getElementById('checkout-button').addEventListener('click', function () {
-        fetch("{% url 'payments' %}", {
-            method: "POST",
+    document.getElementById('stripe-pay-button').addEventListener('click', function () {
+        initiateStripePayment();
+    });
+    
+    function initiateStripePayment() {
+        const form = document.getElementById('stripe-payment-form');
+        const csrfToken = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    
+        fetch(form.action, {
+            method: 'POST',
             headers: {
-                "Content-Type": "application/json",
-                "X-CSRFToken": getCookie("csrftoken"),
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
             },
-            body: JSON.stringify({
-                orderID: "{{ order.order_number }}",
-            })
+            body: JSON.stringify({})
         })
-        .then(function (response) {
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
             return response.json();
         })
-        .then(function (session) {
-            return stripe.redirectToCheckout({ sessionId: session.sessionId });
-        })
-        .then(function (result) {
-            if (result.error) {
-                alert(result.error.message);
+        .then(data => {
+            if (data.redirect_url) {
+                // Redirect to Stripe checkout page
+                window.location.href = data.redirect_url;
+            } else {
+                alert('Error: Unable to retrieve the payment link');
             }
         })
-        .catch(function (error) {
-            console.error("Error:", error);
-        });
-    });
-
-    // Function to get CSRF token for AJAX requests
-    function getCookie(name) {
-        var cookieValue = null;
-        if (document.cookie && document.cookie != '') {
-            var cookies = document.cookie.split(';');
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
+        .catch(error => console.error('Error:', error));
     }
-</script>
+    </script>
+    
 
 {% endblock %}

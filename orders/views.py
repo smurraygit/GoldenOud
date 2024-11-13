@@ -5,12 +5,14 @@ from .forms import OrderForms
 from .models import Order, Payment, OrderProduct, Product
 import datetime
 import json
+from django.urls import reverse
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django.contrib.auth.decorators import user_passes_test
 import stripe
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+from goldenoud.logger import logger, log_debug
 
 # Create your views here.
 
@@ -20,49 +22,73 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 
+def payments(request, order_number):
+    log_debug("Received payment request")
 
-# Set Stripe API key
-stripe.api_key = settings.STRIPE_SECRET_KEY
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Invalid request method'}, status=400)
 
-def payments(request):
-    # Parse the request body to get order details
-    body = json.loads(request.body)
-    order = get_object_or_404(Order, user=request.user, is_ordered=False, order_number=body['orderID'])
+    # Retrieve the order
+    try:
+        order = get_object_or_404(Order, user=request.user, is_ordered=False, order_number=order_number)
+        log_debug(f"Order retrieved: {order.order_number}")
+    except Exception as e:
+        logger.error("Error retrieving order", exc_info=True)
+        return JsonResponse({'error': 'Order not found'}, status=404)
 
     # Create a Stripe Checkout Session
-    session = stripe.checkout.Session.create(
-        payment_method_types=['card'],
-        line_items=[{
-            'price_data': {
-                'currency': 'usd',
-                'product_data': {
-                    'name': f'Order {order.order_number}',
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'gbp',
+                    'product_data': {
+                        'name': f'Order {order.order_number}',
+                    },
+                    'unit_amount': int(order.order_total * 100),
                 },
-                'unit_amount': int(order.order_total * 100),  # Stripe requires amount in cents
-            },
-            'quantity': 1,
-        }],
-        mode='payment',
-        success_url=request.build_absolute_uri('/order-complete?session_id={CHECKOUT_SESSION_ID}'),
-        cancel_url=request.build_absolute_uri('/checkout'),
-    )
+                'quantity': 1,
+            }],
+            mode='payment',
+            client_reference_id=order.order_number,
+            success_url=request.build_absolute_uri(
+                reverse('stripe_return')
+            ) + '?session_id={CHECKOUT_SESSION_ID}',  # Updated success URL
+            cancel_url=request.build_absolute_uri('/checkout'),
+        )
+        logger.info(f"Stripe Checkout session created: {session.id}")
+        log_debug(f"Checkout session details: {session}")
+    except Exception as e:
+        logger.error("Failed to create Stripe Checkout session", exc_info=True)
+        return JsonResponse({'error': 'Failed to create payment session'}, status=500)
 
     # Save the payment information in the Payment model
-    payment = Payment(
-        user=request.user,
-        payment_id=session.id,
-        payment_method='Stripe',
-        amount_paid=order.order_total,
-        status='pending'
-    )
-    payment.save()
+    try:
+        payment = Payment(
+            user=request.user,
+            payment_id=session.id,
+            payment_method='Stripe',
+            amount_paid=order.order_total,
+            status='pending'
+        )
+        payment.save()
+        log_debug(f"Payment saved with ID: {payment.payment_id}")
+    except Exception as e:
+        logger.error("Failed to save payment information", exc_info=True)
+        return JsonResponse({'error': 'Failed to save payment information'}, status=500)
 
     # Link payment to order but mark order as not yet completed
-    order.payment = payment
-    order.save()
+    try:
+        order.payment = payment
+        order.save()
+        log_debug(f"Order {order.order_number} updated with payment ID: {payment.payment_id}")
+    except Exception as e:
+        logger.error("Failed to link payment to order", exc_info=True)
+        return JsonResponse({'error': 'Failed to update order with payment'}, status=500)
 
-    return JsonResponse({'sessionId': session.id})
-
+    log_debug("Payment process completed successfully")
+    return JsonResponse({'sessionId': session.id, 'redirect_url': session.url})
 
 def place_order(request, total=0, quantity=0, weight_total=0):
     current_user = request.user
@@ -127,7 +153,6 @@ def place_order(request, total=0, quantity=0, weight_total=0):
             return render(request, 'orders/payments.html', context)
     else:
         return redirect('checkout')
-
 
 def order_complete(request):
     session_id = request.GET.get('session_id')
@@ -196,4 +221,3 @@ def order_complete(request):
 
     except (Payment.DoesNotExist, Order.DoesNotExist):
         return redirect('home')
-
