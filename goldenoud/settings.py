@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 from django.contrib.messages import constants as messages
 from pathlib import Path
-from decouple import config
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
@@ -22,13 +22,12 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = 'fjwqbop2zf#x0!8trrx@*%mi#utuyj=pof&$n@id!qmbyme5(^'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = 'True'
 
-ALLOWED_HOSTS = ['limitless-cliffs-08424-f8ce4fc868ec.herokuapp.com', '127.0.0.1',
-                 'goldenoud.xyz', 'www.goldenoud.xyz']
+ALLOWED_HOSTS = [ 'www.glasgoud.com']
 
 
 # Application definition
@@ -145,11 +144,11 @@ MESSAGE_TAGS = {
 }
 
 # EMAIL CONFIGURATION
-EMAIL_HOST = config('EMAIL_HOST')
-EMAIL_PORT = config('EMAIL_PORT', cast=int)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=False, cast=bool)
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = '587'
+EMAIL_HOST_USER = 'saeed.murray@gmail.com'
+EMAIL_HOST_PASSWORD = 'xruebeiqgoujnxpq'
+EMAIL_USE_TLS = 'True'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
