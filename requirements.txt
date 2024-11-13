@@ -4,10 +4,15 @@ charset-normalizer
 Django
 django-admin-honeypot
 django-admin-thumbnails
+django-guest-user
 idna
 pillow
 pytz
-requests
+requests=
 six
 sqlparse
+stripe
+termcolor
+typing_extensions
+tzdata
 urllib3
