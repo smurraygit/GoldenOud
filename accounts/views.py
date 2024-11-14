@@ -451,17 +451,24 @@ def update_order_status(request, order_number):
 
         # Check if the order status is set to 'Shipped'
         if new_status == 'Shipped':
+            # Calculate subtotal for each ordered product
+            ordered_products = OrderProduct.objects.filter(order_id=order.id)
+            for item in ordered_products:
+                item.subtotal = item.product_price * item.quantity
+
+            # Calculate the overall subtotal
+            subtotal = sum(item.subtotal for item in ordered_products)
+
             # Determine customer email
-            if 'guest' in request.user.email:
-                customer_email = guest_email
-            else:
-                customer_email = request.user.email
+            customer_email = order.email
 
             # Prepare email content
             mail_subject = 'Your Order Has Been Shipped'
             message = render_to_string('orders/shipped_confirmation.html', {
                 'user': request.user,
                 'order': order,
+                'ordered_products': ordered_products,
+                'subtotal': subtotal,
             })
             email = EmailMessage(mail_subject, message, to=[customer_email])
             email.content_subtype = "html"  # Set content to HTML

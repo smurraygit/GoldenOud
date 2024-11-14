@@ -4,7 +4,7 @@ from .models import Cart, CartItem
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.auth.decorators import login_required
 from guest_user.decorators import allow_guest_user
-
+from decimal import Decimal
 
 # Create your views here.
 def _cart_id(request):
@@ -178,21 +178,29 @@ def remove_cart_item(request, product_id, cart_item_id):
 
 def cart(request, total=0, quantity=0, cart_items=None):
     try:
-        tax = 0
-        grand_total = 0
+        tax = Decimal('0.00')
+        grand_total = Decimal('0.00')
+        
         if request.user.is_authenticated:
-            cart_items = CartItem.objects.filter(
-                user=request.user, is_active=True)
+            cart_items = CartItem.objects.filter(user=request.user, is_active=True)
         else:
             cart = Cart.objects.get(cart_id=_cart_id(request))
             cart_items = CartItem.objects.filter(cart=cart, is_active=True)
+        
         for cart_item in cart_items:
-            total += (cart_item.product.price * cart_item.quantity)
+            total += Decimal(cart_item.product.price * cart_item.quantity)
             quantity += cart_item.quantity
-        tax = (2 * total)/100
-        grand_total = total + tax
+        
+        # Ensure total has two decimal places
+        total = round(total, 2)
+
+        # Calculate tax and grand total with two decimal places
+        tax = round(Decimal('20') * total / Decimal('100'), 2)
+        grand_total = round(total + tax, 2)
+    
     except ObjectDoesNotExist:
         pass
+
     context = {
         'total': total,
         'quantity': quantity,
@@ -205,24 +213,32 @@ def cart(request, total=0, quantity=0, cart_items=None):
 
 
 # @allow_guest_user()
-@ login_required(login_url='login')
+@login_required(login_url='login')
 def checkout(request, total=0, quantity=0, cart_items=None):
     try:
-        tax = 0
-        grand_total = 0
+        tax = Decimal('0.00')
+        grand_total = Decimal('0.00')
+
         if request.user.is_authenticated:
-            cart_items = CartItem.objects.filter(
-                user=request.user, is_active=True)
+            cart_items = CartItem.objects.filter(user=request.user, is_active=True)
         else:
             cart = Cart.objects.get(cart_id=_cart_id(request))
             cart_items = CartItem.objects.filter(cart=cart, is_active=True)
+        
         for cart_item in cart_items:
-            total += (cart_item.product.price * cart_item.quantity)
+            total += Decimal(cart_item.product.price * cart_item.quantity)
             quantity += cart_item.quantity
-        tax = (2 * total)/100
-        grand_total = total + tax
+
+        # Ensure total has two decimal places
+        total = round(total, 2)
+
+        # Calculate tax and grand total with two decimal places
+        tax = round(Decimal('20') * total / Decimal('100'), 2)
+        grand_total = round(total + tax, 2)
+    
     except ObjectDoesNotExist:
         pass
+
     context = {
         'total': total,
         'quantity': quantity,

@@ -22,12 +22,12 @@
             <h1>Order Confirmation</h1>
         </div>
         <div class="content">
-            <p>Dear {{user.first_name}},</p>
+            <p>Dear {{ user.first_name }},</p>
             <p>Thank you for your order. We're pleased to confirm that we've received it and it's being processed.</p>
             
             <h2>Order Details</h2>
-            <p><strong>Order Number:</strong> {{order.order_number}}</p>
-            <p><strong>Order Date:</strong> {{order.created_at|date:"F d, Y"}}</p>
+            <p><strong>Order Number:</strong> {{ order.order_number }}</p>
+            <p><strong>Order Date:</strong> {{ order.created_at|date:"F d, Y" }}</p>
             
             <table>
                 <thead>
@@ -39,29 +39,33 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in order.orderproduct_set.all %}
+                    {% for item in ordered_products %}
                     <tr>
-                        <td>{{item.product.product_name}}</td>
-                        <td>{{item.quantity}}</td>
-                        <td>${{item.product_price}}</td>
-                        <td>${{item.sub_total}}</td>
+                        <td>{{ item.product.product_name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>£{{ item.product_price|floatformat:2 }}</td>
+                        <td>£{{ item.subtotal|floatformat:2 }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr>
+                        <td colspan="3"><strong>Subtotal</strong></td>
+                        <td><strong>£{{ subtotal|floatformat:2 }}</strong></td>
+                    </tr>
+                    <tr>
                         <td colspan="3"><strong>Total</strong></td>
-                        <td><strong>${{order.order_total}}</strong></td>
+                        <td><strong>£{{ order.order_total|floatformat:2 }}</strong></td>
                     </tr>
                 </tfoot>
             </table>
             
             <h2>Shipping Information</h2>
             <p>
-                {{order.full_name}}<br>
-                {{order.full_address}}<br>
-                {{order.city}}, {{order.state}}<br>
-                {{order.country}} {{order.pincode}}
+                {{ order.full_name }}<br>
+                {{ order.full_address }}<br>
+                {{ order.city }}, {{ order.state }}<br>
+                {{ order.country }} {{ order.pincode }}
             </p>
             
             <p>If you have any questions about your order, please don't hesitate to contact us.</p>

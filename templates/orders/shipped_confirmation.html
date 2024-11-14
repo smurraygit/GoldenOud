@@ -39,19 +39,23 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for item in order.orderproduct_set.all %}
+                    {% for item in ordered_products %}
                     <tr>
                         <td>{{ item.product.product_name }}</td>
                         <td>{{ item.quantity }}</td>
-                        <td>${{ item.product_price }}</td>
-                        <td>${{ item.product_price|floatformat:2 }}</td>
+                        <td>£{{ item.product_price|floatformat:2 }}</td>
+                        <td>£{{ item.subtotal|floatformat:2 }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr>
+                        <td colspan="3"><strong>Subtotal</strong></td>
+                        <td><strong>£{{ subtotal|floatformat:2 }}</strong></td>
+                    </tr>
+                    <tr>
                         <td colspan="3"><strong>Total</strong></td>
-                        <td><strong>${{ order.order_total|floatformat:2 }}</strong></td>
+                        <td><strong>£{{ order.order_total|floatformat:2 }}</strong></td>
                     </tr>
                 </tfoot>
             </table>

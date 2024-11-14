@@ -135,6 +135,27 @@
                 </tbody>
                 </table>
 
+                <div class="card">
+                    <div class="card-body">
+                        <dl class="dlist-align">
+                          <dt>Total price:</dt>
+                          <dd class="text-right">£{{ total }}</dd>
+                        </dl>
+                        <dl class="dlist-align">
+                          <dt>Tax:</dt>
+                          <dd class="text-right"> £{{ tax }}</dd>
+                        </dl>
+                        <dl class="dlist-align">
+                          <dt>Total:</dt>
+                          <dd class="text-right text-dark b"><strong>£{{ grand_total }}</strong></dd>
+                        </dl>
+                        <hr>
+                        <p class="text-center mb-3">
+                            <img src="{% static './images/misc/payments.png' %}" height="26">
+                        </p>
+                       </div> <!-- card-body.// -->
+                    </div> <!-- card.// -->
+
 			<button type="submit" name="submit" class="btn btn-dark btn-block">Place Order</button>
 			<a href="{% url 'store' %}" class="btn btn-light btn-block">Continue Shopping</a>
         </form>

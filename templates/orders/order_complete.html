@@ -79,7 +79,7 @@
                                                     </p>
                                                 </td>
                                                 <td class="text-center">{{item.quantity}}</td>
-                                                <td class="text-center">£{{item.product.price}} GBP</td>
+                                                <td class="text-center">£{{ item.subtotal|floatformat:2 }} GBP</td>
                                             </tr>
                                             {% endfor %}
 

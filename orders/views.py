@@ -13,6 +13,7 @@ import stripe
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from goldenoud.logger import logger, log_debug
+from decimal import Decimal
 
 # Create your views here.
 
@@ -98,14 +99,20 @@ def place_order(request, total=0, quantity=0, weight_total=0):
     if cart_count <= 0:
         return redirect('store')
 
-    grand_total = 0
-    tax = 0
+    grand_total = Decimal('0.00')
+    tax = Decimal('0.00')
+
     for cart_item in cart_items:
-        total += (cart_item.product.price * cart_item.quantity)
+        total += Decimal(cart_item.product.price * cart_item.quantity)
         quantity += cart_item.quantity
-        weight_total += (cart_item.product.weight * cart_item.quantity)  # Calculate total weight
-    tax = (2 * total)/100
-    grand_total = total + tax
+        weight_total += Decimal(cart_item.product.weight * cart_item.quantity)  # Calculate total weight
+
+    # Ensure total has two decimal places
+    total = round(total, 2)
+
+    # Calculate tax and grand total with two decimal places
+    tax = round(Decimal('20') * total / Decimal('100'), 2)
+    grand_total = round(total + tax, 2)
 
     if request.method == 'POST':
         global guest_email
@@ -195,24 +202,31 @@ def order_complete(request):
         # Clear the cart
         cart_items.delete()
 
-        # Send order confirmation email
+        # Retrieve ordered products and calculate subtotals
+        ordered_products = OrderProduct.objects.filter(order_id=order.id)
+        for item in ordered_products:
+            item.subtotal = item.product.price * item.quantity
+
+        # Calculate the overall subtotal
+        subtotal = sum(item.subtotal for item in ordered_products)
+
+        # Send order confirmation email with subtotal information
         mail_subject = 'Thank you for your order'
         message = render_to_string('orders/order_receive_email.html', {
             'user': request.user,
             'order': order,
+            'ordered_products': ordered_products,
+            'subtotal': subtotal,
         })
-        to_email = request.user.email
+        to_email = order.email
         email = EmailMessage(mail_subject, message, to=[to_email])
         email.content_subtype = "html"
         email.send()
 
-        # Calculate subtotal for the order complete page
-        subtotal = sum(item.product_price * item.quantity for item in OrderProduct.objects.filter(order_id=order.id))
-
         # Render the order complete page
         context = {
             'order': order,
-            'ordered_products': OrderProduct.objects.filter(order_id=order.id),
+            'ordered_products': ordered_products,
             'order_number': order.order_number,
             'payment': payment,
             'subtotal': subtotal,
